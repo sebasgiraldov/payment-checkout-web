@@ -58,8 +58,9 @@ export const Checkout: React.FC = () => {
   // In a real app we would have a cart. Here we use the first product or a placeholder.
   const product = products[0]; 
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<CheckoutFormData>({
+  const { register, handleSubmit, watch, setValue, formState: { errors, isValid, isSubmitting } } = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
+    mode: 'onChange',
     defaultValues: {
       fullName: customerData?.fullName || '',
       email: customerData?.email || '',
@@ -89,7 +90,10 @@ export const Checkout: React.FC = () => {
     return null;
   };
 
-  const onSubmitStep2 = (data: CheckoutFormData) => {
+  const onSubmitStep2 = async (data: CheckoutFormData) => {
+    // Add a small delay to show the loader and improve UX feel
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
     dispatch(setCustomerData({
       fullName: data.fullName,
       email: data.email,
@@ -272,23 +276,28 @@ export const Checkout: React.FC = () => {
                 
                 <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
                   {[
-                    { id: 'CARD', label: 'Card', icon: <CreditCard className="w-4 h-4" /> },
-                    { id: 'NEQUI', label: 'Nequi', icon: <Smartphone className="w-4 h-4" /> },
-                    { id: 'PSE', label: 'PSE', icon: <Landmark className="w-4 h-4" /> },
-                    { id: 'BANCOLOMBIA_TRANSFER', label: 'Transfer', icon: <Package className="w-4 h-4" /> },
+                    { id: 'CARD', label: 'Card', icon: <CreditCard className="w-4 h-4" />, available: true },
+                    { id: 'NEQUI', label: 'Nequi', icon: <Smartphone className="w-4 h-4" />, available: false },
+                    { id: 'PSE', label: 'PSE', icon: <Landmark className="w-4 h-4" />, available: false },
+                    { id: 'BANCOLOMBIA_TRANSFER', label: 'Transfer', icon: <Package className="w-4 h-4" />, available: false },
                   ].map((method) => (
                     <button
                       key={method.id}
                       type="button"
-                      onClick={() => dispatch(setPaymentMethod(method.id as any))}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg border font-bold text-xs whitespace-nowrap transition-all ${
+                      onClick={() => method.available && dispatch(setPaymentMethod(method.id as any))}
+                      className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg border font-bold text-xs whitespace-nowrap transition-all ${
                         paymentMethod === method.id 
                           ? 'bg-primary text-background-dark border-primary shadow-[0_0_15px_rgba(56,255,20,0.2)]' 
-                          : 'bg-background-dark border-white/10 text-slate-400 hover:border-primary/50'
+                          : !method.available 
+                            ? 'bg-white/5 border-white/5 text-slate-600 opacity-50 cursor-not-allowed'
+                            : 'bg-background-dark border-white/10 text-slate-400 hover:border-primary/50'
                       }`}
                     >
-                      {method.icon}
-                      {method.label}
+                      <div className="flex items-center gap-2">
+                        {method.icon}
+                        {method.label}
+                      </div>
+                      {!method.available && <span className="text-[8px] opacity-70 uppercase">Coming Soon</span>}
                     </button>
                   ))}
                 </div>
@@ -361,17 +370,33 @@ export const Checkout: React.FC = () => {
               </section>
               
               {Object.keys(errors).length > 0 && (
-                <p className="text-red-500 text-xs text-center font-bold animate-pulse">
-                  Please fix the validation errors above to proceed.
-                </p>
+                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 animate-in fade-in slide-in-from-top-2">
+                  <p className="text-red-500 text-[10px] uppercase font-black tracking-tight flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
+                    Attention: Required Fields Missing
+                  </p>
+                  <p className="text-slate-400 text-[10px] mt-1">Please complete all personal and payment information sections to continue.</p>
+                </div>
+              )}
+
+              {paymentMethod !== 'CARD' && (
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-center">
+                  <p className="text-amber-500 text-[10px] uppercase font-black tracking-tight">Currently Unavailable</p>
+                  <p className="text-slate-400 text-[10px] mt-1">Only Credit Card payments are supported in this sandbox environment.</p>
+                </div>
               )}
               
               <button 
                 type="submit"
-                className="w-full bg-primary text-background-dark font-black py-4 rounded-xl flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(56,255,20,0.15)] hover:scale-[1.02] active:scale-[0.98] transition-all"
+                disabled={!isValid || paymentMethod !== 'CARD' || isSubmitting}
+                className={`w-full ${!isValid || paymentMethod !== 'CARD' ? 'bg-slate-800 text-slate-500 cursor-not-allowed grayscale' : 'bg-primary text-background-dark hover:scale-[1.02] shadow-[0_0_30px_rgba(56,255,20,0.15)]'} font-black py-4 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all`}
               >
-                <span>REVIEW SUMMARY</span>
-                <Lock className="w-4 h-4" />
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                  <>
+                    <span>REVIEW SUMMARY</span>
+                    <Lock className="w-4 h-4" />
+                  </>
+                )}
               </button>
               
               <div className="flex flex-col items-center gap-2 py-2">
@@ -457,12 +482,20 @@ export const Checkout: React.FC = () => {
                  >
                    GO BACK
                  </button>
-                 <button 
-                   onClick={handleSubmit(processPaymentFlow)}
-                   className="py-4 rounded-xl bg-primary text-background-dark font-black hover:scale-[1.02] shadow-[0_0_30px_rgba(56,255,20,0.2)] transition-all"
-                 >
-                   CONFIRM & PAY
-                 </button>
+<button 
+                    onClick={handleSubmit(processPaymentFlow)}
+                    disabled={isSubmitting}
+                    className={`py-4 rounded-xl font-black transition-all flex items-center justify-center gap-2 ${isSubmitting ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-primary text-background-dark hover:scale-[1.02] shadow-[0_0_30px_rgba(56,255,20,0.2)]'}`}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>PROCESSING...</span>
+                      </>
+                    ) : (
+                      <span>CONFIRM & PAY</span>
+                    )}
+                  </button>
                </div>
             </div>
           </motion.div>
