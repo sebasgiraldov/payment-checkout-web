@@ -2,7 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 export type CheckoutStep = 1 | 2 | 3 | 4 | 5;
 
-interface CheckoutState {
+export interface CheckoutState {
   step: CheckoutStep;
   customerData: {
     email: string;
