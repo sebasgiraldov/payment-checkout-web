@@ -1,7 +1,7 @@
-import checkoutReducer, { setStep, setPaymentStatus } from './checkoutSlice';
+import checkoutReducer, { setStep, setPaymentStatus, CheckoutState } from './checkoutSlice';
 
 describe('checkout slice', () => {
-  const initialState = {
+  const initialState: CheckoutState = {
     step: 1,
     customerData: null,
     deliveryData: null,
