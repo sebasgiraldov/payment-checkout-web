@@ -18,7 +18,7 @@ import { updateStock } from '../store/slices/productSlice';
 import { api } from '../services/api';
 import { CardDetails } from '../types';
 
-const checkoutSchema = z.object({
+const baseSchema = z.object({
   fullName: z.string().min(3, 'Full name is required'),
   email: z.string().email('Invalid email address'),
   phoneNumber: z.string().min(10, 'Phone must be at least 10 digits'),
@@ -27,11 +27,25 @@ const checkoutSchema = z.object({
   state: z.string().min(2, 'State is required'),
   zipCode: z.string().min(5, 'Zip code is required'),
   country: z.string().min(2, 'Country is required'),
+});
+
+const cardSchema = baseSchema.extend({
+  paymentMethod: z.literal('CARD'),
   cardNumber: z.string().regex(/^\d{16}$/, 'Card number must be 16 digits'),
   cardHolder: z.string().min(3, 'Card holder name is required'),
   expirationDate: z.string().regex(/^(0[1-9]|1[0-2])\/\d{2}$/, 'Expiration must be MM/YY'),
   cvv: z.string().regex(/^\d{3,4}$/, 'CVV must be 3 or 4 digits'),
 });
+
+const otherSchema = baseSchema.extend({
+  paymentMethod: z.enum(['NEQUI', 'PSE', 'BANCOLOMBIA_TRANSFER']),
+  cardNumber: z.string().optional(),
+  cardHolder: z.string().optional(),
+  expirationDate: z.string().optional(),
+  cvv: z.string().optional(),
+});
+
+const checkoutSchema = z.discriminatedUnion('paymentMethod', [cardSchema, otherSchema]);
 
 type CheckoutFormData = z.infer<typeof checkoutSchema>;
 
@@ -44,7 +58,7 @@ export const Checkout: React.FC = () => {
   // In a real app we would have a cart. Here we use the first product or a placeholder.
   const product = products[0]; 
 
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<CheckoutFormData>({
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
       fullName: customerData?.fullName || '',
@@ -55,8 +69,18 @@ export const Checkout: React.FC = () => {
       state: deliveryData?.state || '',
       zipCode: deliveryData?.zipCode || '',
       country: deliveryData?.country || 'Colombia',
+      paymentMethod: paymentMethod || 'CARD',
     }
   });
+
+  const paymentMethodSelected = watch('paymentMethod');
+  const expirationDateValue = watch('expirationDate');
+
+  useEffect(() => {
+    if (expirationDateValue && expirationDateValue.length === 2 && !expirationDateValue.includes('/')) {
+      setValue('expirationDate', expirationDateValue + '/');
+    }
+  }, [expirationDateValue, setValue]);
 
   const cardNumber = watch('cardNumber');
   const getCardLogo = (number: string) => {
@@ -178,15 +202,27 @@ export const Checkout: React.FC = () => {
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <input {...register('fullName')} placeholder="Full Name" className="w-full bg-background-dark border border-white/10 rounded-lg px-4 py-3 text-slate-100 focus:border-primary focus:outline-none transition-all" />
+                    <input 
+                      {...register('fullName')} 
+                      placeholder="Full Name" 
+                      className={`w-full bg-background-dark border ${errors.fullName ? 'border-red-500' : 'border-white/10'} rounded-lg px-4 py-3 text-slate-100 focus:border-primary focus:outline-none transition-all`} 
+                    />
                     {errors.fullName && <p className="text-red-500 text-xs mt-1">{errors.fullName.message}</p>}
                   </div>
                   <div>
-                    <input {...register('email')} placeholder="Email Address" className="w-full bg-background-dark border border-white/10 rounded-lg px-4 py-3 text-slate-100 focus:border-primary focus:outline-none transition-all" />
+                    <input 
+                      {...register('email')} 
+                      placeholder="Email Address" 
+                      className={`w-full bg-background-dark border ${errors.email ? 'border-red-500' : 'border-white/10'} rounded-lg px-4 py-3 text-slate-100 focus:border-primary focus:outline-none transition-all`} 
+                    />
                     {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
                   </div>
                   <div>
-                    <input {...register('phoneNumber')} placeholder="+573001234567" className="w-full bg-background-dark border border-white/10 rounded-lg px-4 py-3 text-slate-100 focus:border-primary focus:outline-none transition-all" />
+                    <input 
+                      {...register('phoneNumber')} 
+                      placeholder="+573001234567" 
+                      className={`w-full bg-background-dark border ${errors.phoneNumber ? 'border-red-500' : 'border-white/10'} rounded-lg px-4 py-3 text-slate-100 focus:border-primary focus:outline-none transition-all`} 
+                    />
                     <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-widest pl-1 font-bold">Hint: 10 digit mobile number</p>
                     {errors.phoneNumber && <p className="text-red-500 text-xs mt-1">{errors.phoneNumber.message}</p>}
                   </div>
@@ -198,17 +234,29 @@ export const Checkout: React.FC = () => {
                   <MapPin className="w-5 h-5" />
                   <h3 className="font-bold uppercase tracking-widest text-sm">Shipping Details</h3>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
-                    <input {...register('address')} placeholder="Address" className="w-full bg-background-dark border border-white/10 rounded-lg px-4 py-3 text-slate-100 focus:border-primary focus:outline-none transition-all" />
+                    <input 
+                      {...register('address')} 
+                      placeholder="Address" 
+                      className={`w-full bg-background-dark border ${errors.address ? 'border-red-500' : 'border-white/10'} rounded-lg px-4 py-3 text-slate-100 focus:border-primary focus:outline-none transition-all`} 
+                    />
                     {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address.message}</p>}
                   </div>
                   <div>
-                    <input {...register('city')} placeholder="City" className="w-full bg-background-dark border border-white/10 rounded-lg px-4 py-3 text-slate-100 focus:border-primary focus:outline-none transition-all" />
+                    <input 
+                      {...register('city')} 
+                      placeholder="City" 
+                      className={`w-full bg-background-dark border ${errors.city ? 'border-red-500' : 'border-white/10'} rounded-lg px-4 py-3 text-slate-100 focus:border-primary focus:outline-none transition-all`} 
+                    />
                     {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city.message}</p>}
                   </div>
                   <div>
-                    <input {...register('state')} placeholder="State" className="w-full bg-background-dark border border-white/10 rounded-lg px-4 py-3 text-slate-100 focus:border-primary focus:outline-none transition-all" />
+                    <input 
+                      {...register('state')} 
+                      placeholder="State" 
+                      className={`w-full bg-background-dark border ${errors.state ? 'border-red-500' : 'border-white/10'} rounded-lg px-4 py-3 text-slate-100 focus:border-primary focus:outline-none transition-all`} 
+                    />
                     {errors.state && <p className="text-red-500 text-xs mt-1">{errors.state.message}</p>}
                   </div>
                 </div>
@@ -219,32 +267,97 @@ export const Checkout: React.FC = () => {
               <section className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
                 <div className="flex items-center gap-2 mb-2 text-primary">
                   <CreditCard className="w-5 h-5" />
-                  <h3 className="font-bold uppercase tracking-widest text-sm">Payment Details</h3>
+                  <h3 className="font-bold uppercase tracking-widest text-sm">Payment Method</h3>
                 </div>
-                <div className="space-y-4">
-                  <div className="relative">
-                    <input {...register('cardNumber')} placeholder="Card Number (16 digits)" className="w-full bg-background-dark border border-white/10 rounded-lg px-4 py-3 text-slate-100 focus:border-primary focus:outline-none transition-all" />
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 h-6">
-                      {getCardLogo(cardNumber) === 'VISA' && <span className="text-blue-500 font-bold italic">VISA</span>}
-                      {getCardLogo(cardNumber) === 'MASTERCARD' && <span className="text-orange-500 font-bold">MC</span>}
-                    </div>
-                    {errors.cardNumber && <p className="text-red-500 text-xs mt-1">{errors.cardNumber.message}</p>}
-                  </div>
-                  <div>
-                    <input {...register('cardHolder')} placeholder="Card Holder Name" className="w-full bg-background-dark border border-white/10 rounded-lg px-4 py-3 text-slate-100 focus:border-primary focus:outline-none transition-all" />
-                    {errors.cardHolder && <p className="text-red-500 text-xs mt-1">{errors.cardHolder.message}</p>}
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <input {...register('expirationDate')} placeholder="MM/YY" className="w-full bg-background-dark border border-white/10 rounded-lg px-4 py-3 text-slate-100 focus:border-primary focus:outline-none transition-all" />
-                      {errors.expirationDate && <p className="text-red-500 text-xs mt-1">{errors.expirationDate.message}</p>}
-                    </div>
-                    <div>
-                      <input {...register('cvv')} placeholder="CVV" className="w-full bg-background-dark border border-white/10 rounded-lg px-4 py-3 text-slate-100 focus:border-primary focus:outline-none transition-all" />
-                      {errors.cvv && <p className="text-red-500 text-xs mt-1">{errors.cvv.message}</p>}
-                    </div>
-                  </div>
+                
+                <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
+                  {[
+                    { id: 'CARD', label: 'Card', icon: <CreditCard className="w-4 h-4" /> },
+                    { id: 'NEQUI', label: 'Nequi', icon: <Smartphone className="w-4 h-4" /> },
+                    { id: 'PSE', label: 'PSE', icon: <Landmark className="w-4 h-4" /> },
+                    { id: 'BANCOLOMBIA_TRANSFER', label: 'Transfer', icon: <Package className="w-4 h-4" /> },
+                  ].map((method) => (
+                    <button
+                      key={method.id}
+                      type="button"
+                      onClick={() => dispatch(setPaymentMethod(method.id as any))}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg border font-bold text-xs whitespace-nowrap transition-all ${
+                        paymentMethod === method.id 
+                          ? 'bg-primary text-background-dark border-primary shadow-[0_0_15px_rgba(56,255,20,0.2)]' 
+                          : 'bg-background-dark border-white/10 text-slate-400 hover:border-primary/50'
+                      }`}
+                    >
+                      {method.icon}
+                      {method.label}
+                    </button>
+                  ))}
                 </div>
+
+                {paymentMethod === 'CARD' ? (
+                  <>
+                    <div className="relative">
+                      <input 
+                        {...register('cardNumber')} 
+                        placeholder="Card Number (16 digits)" 
+                        inputMode="numeric"
+                        maxLength={16}
+                        className={`w-full bg-background-dark border ${errors.cardNumber ? 'border-red-500' : 'border-white/10'} rounded-lg px-4 py-3 text-slate-100 focus:border-primary focus:outline-none transition-all`}
+                        onKeyDown={(e) => {
+                          if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Tab') e.preventDefault();
+                        }}
+                      />
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 h-6">
+                        {getCardLogo(cardNumber) === 'VISA' && <span className="text-blue-500 font-bold italic">VISA</span>}
+                        {getCardLogo(cardNumber) === 'MASTERCARD' && <span className="text-orange-500 font-bold">MC</span>}
+                      </div>
+                      {errors.cardNumber && <p className="text-red-500 text-xs mt-1">{errors.cardNumber.message}</p>}
+                    </div>
+                    <div>
+                      <input 
+                        {...register('cardHolder')} 
+                        placeholder="Card Holder Name" 
+                        className={`w-full bg-background-dark border ${errors.cardHolder ? 'border-red-500' : 'border-white/10'} rounded-lg px-4 py-3 text-slate-100 focus:border-primary focus:outline-none transition-all`} 
+                      />
+                      {errors.cardHolder && <p className="text-red-500 text-xs mt-1">{errors.cardHolder.message}</p>}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <input 
+                          {...register('expirationDate')} 
+                          placeholder="MM/YY" 
+                          maxLength={5}
+                          className={`w-full bg-background-dark border ${errors.expirationDate ? 'border-red-500' : 'border-white/10'} rounded-lg px-4 py-3 text-slate-100 focus:border-primary focus:outline-none transition-all`} 
+                        />
+                        {errors.expirationDate && <p className="text-red-500 text-xs mt-1">{errors.expirationDate.message}</p>}
+                      </div>
+                      <div>
+                        <input 
+                          {...register('cvv')} 
+                          placeholder="CVV" 
+                          inputMode="numeric"
+                          maxLength={4}
+                          className={`w-full bg-background-dark border ${errors.cvv ? 'border-red-500' : 'border-white/10'} rounded-lg px-4 py-3 text-slate-100 focus:border-primary focus:outline-none transition-all`}
+                          onKeyDown={(e) => {
+                            if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Tab') e.preventDefault();
+                          }}
+                        />
+                        {errors.cvv && <p className="text-red-500 text-xs mt-1">{errors.cvv.message}</p>}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-8 bg-background-dark/50 border border-white/5 rounded-xl text-center space-y-4 animate-in fade-in zoom-in-95">
+                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto text-primary">
+                      {paymentMethod === 'NEQUI' && <Smartphone className="w-6 h-6" />}
+                      {paymentMethod === 'PSE' && <Landmark className="w-6 h-6" />}
+                      {paymentMethod === 'BANCOLOMBIA_TRANSFER' && <Package className="w-6 h-6" />}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-100 uppercase tracking-widest text-xs">{paymentMethod?.replace('_', ' ')} SELECTED</h4>
+                      <p className="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-tight">You will be redirected to the secure gateway to complete your payment.</p>
+                    </div>
+                  </div>
+                )}
               </section>
               
               {Object.keys(errors).length > 0 && (
