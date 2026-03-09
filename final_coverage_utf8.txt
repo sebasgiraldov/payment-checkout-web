@@ -1,0 +1,77 @@
+﻿
+> react-example@0.0.0 test
+> jest --coverage --collectCoverageFrom=src/store/slices/checkoutSlice.ts
+
+node.exe : 
+ts-jest[config] (WARN) 
+[94mmessage[0m[90m 
+TS151001: [0mIf you have 
+issues related to 
+imports, you should 
+consider setting 
+`esModuleInterop` to 
+`true` in your TypeScript 
+configuration file 
+(usually 
+`tsconfig.json`). See http
+s://blogs.msdn.microsoft.c
+om/typescript/2018/01/31/a
+nnouncing-typescript-2-7/#
+easier-ecmascript-module-i
+nteroperability for more 
+information.
+En línea: 1 Carácter: 1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (t  
+  s-jest[config]...re i   
+ nformation.:String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+PASS src/store/slices/chec
+koutSlice.test.ts (8.103 
+s)
+  checkoutSlice
+    √ should return the 
+initial state (20 ms)
+    √ should handle 
+setStep (8 ms)
+    √ should handle 
+setCustomerData (3 ms)
+    √ should handle 
+setDeliveryData (3 ms)
+    √ should handle 
+setPaymentMethod (13 ms)
+    √ should handle 
+setTransactionId (3 ms)
+    √ should handle 
+setPaymentStatus (5 ms)
+    √ should handle 
+resetCheckout (4 ms)
+    √ should preserve 
+state while updating 
+other fields (4 ms)
+
+------------------|---------|----------|---------|---------|-------------------
+File              | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+------------------|---------|----------|---------|---------|-------------------
+All files         |     100 |      100 |     100 |     100 |                   
+ checkoutSlice.ts |     100 |      100 |     100 |     100 |                   
+------------------|---------|----------|---------|---------|-------------------
+Test Suites: 1 passed, 1 
+total
+Tests:       9 passed, 9 
+total
+Snapshots:   0 total
+Time:        25.329 s
+Ran all test suites.
+
