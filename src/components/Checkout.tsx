@@ -3,7 +3,20 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { CreditCard, Smartphone, Landmark, Lock, ShieldCheck, ChevronLeft, Loader2, Package, MapPin, User as UserIcon, CheckCircle2, XCircle } from 'lucide-react';
+import { 
+  CreditCard, 
+  Smartphone, 
+  Landmark, 
+  Lock, 
+  ShieldCheck, 
+  ChevronLeft, 
+  Loader2, 
+  Package, 
+  MapPin, 
+  User as UserIcon, 
+  CheckCircle2, 
+  XCircle 
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { RootState, AppDispatch } from '../store';
 import { 
@@ -16,8 +29,9 @@ import {
 } from '../store/slices/checkoutSlice';
 import { updateStock } from '../store/slices/productSlice';
 import { api } from '../services/api';
-import { CardDetails } from '../types';
-import { PRODUCT_IMAGES, getProductImage } from '../utils/constants';
+import { Product, CardDetails } from '../types';
+import { getProductImage } from '../utils/constants';
+import { useCreateTransaction, useProcessPayment } from '../hooks/useCheckout';
 
 // Product images mapping moved to constants.ts
 
@@ -52,16 +66,18 @@ const checkoutSchema = z.discriminatedUnion('paymentMethod', [cardSchema, otherS
 
 type CheckoutFormData = z.infer<typeof checkoutSchema>;
 
-export const Checkout: React.FC = () => {
+interface CheckoutProps {
+  product: Product | null;
+}
+
+export const Checkout: React.FC<CheckoutProps> = ({ product }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { step, customerData, deliveryData, paymentMethod, paymentStatus, transactionId } = useSelector((state: RootState) => state.checkout);
-  const { items: products } = useSelector((state: RootState) => state.products);
   
-  // For this test, we assume a single product checkout as per original flow
-  // In a real app we would have a cart. Here we use the first product or a placeholder.
-  const product = products[0]; 
+  const createTransactionMutation = useCreateTransaction();
+  const processPaymentMutation = useProcessPayment();
 
-  const { register, handleSubmit, watch, setValue, getValues, formState: { errors, isValid, isSubmitting } } = useForm<CheckoutFormData>({
+  const { register, handleSubmit, watch, setValue, getValues, formState: { errors, isValid } } = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
     mode: 'onChange',
     shouldUnregister: false,
@@ -74,17 +90,11 @@ export const Checkout: React.FC = () => {
       state: deliveryData?.state || '',
       zipCode: deliveryData?.zipCode || '',
       country: deliveryData?.country || 'Colombia',
-      // paymentMethod removed to match backend expectation
       paymentMethod: paymentMethod || 'CARD',
     }
   });
 
-  // Debug errors in development
-  useEffect(() => {
-    if (Object.keys(errors).length > 0) {
-      console.log('Form Validation Errors:', errors);
-    }
-  }, [errors]);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const paymentMethodSelected = watch('paymentMethod');
   const expirationDateValue = watch('expirationDate');
@@ -96,22 +106,19 @@ export const Checkout: React.FC = () => {
   }, [expirationDateValue, setValue]);
 
   const cardNumber = watch('cardNumber');
-  const getCardLogo = (number: string) => {
-    if (number?.startsWith('4')) return 'VISA';
-    if (number?.match(/^5[1-5]/)) return 'MASTERCARD';
+  const getCardLogo = (number: string | undefined) => {
+    if (!number) return null;
+    if (number.startsWith('4')) return 'VISA';
+    if (number.match(/^5[1-5]/)) return 'MASTERCARD';
     return null;
   };
-
-  const [apiError, setApiError] = useState<string | null>(null);
-  const [isCreatingTransaction, setIsCreatingTransaction] = useState(false);
 
   const onSubmitStep2 = async (data: CheckoutFormData) => {
     if (!product) return;
     setApiError(null);
-    setIsCreatingTransaction(true);
     
     try {
-      const transaction = await api.createTransaction({
+      const transaction = await createTransactionMutation.mutateAsync({
         productId: product.id,
         customerName: data.fullName,
         customerEmail: data.email,
@@ -124,7 +131,7 @@ export const Checkout: React.FC = () => {
         baseFee: 5.00,
         deliveryFee: 10.00,
         currency: "COP",
-        paymentMethod: "CARD" // Target backend only supports CARD properly
+        paymentMethod: "CARD"
       });
 
       dispatch(setTransactionId(transaction.id));
@@ -141,11 +148,9 @@ export const Checkout: React.FC = () => {
         country: data.country || 'Colombia'
       }));
       dispatch(setStep(3));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Transaction creation error:', error);
-      setApiError('Failed to create transaction. Please try again.');
-    } finally {
-      setIsCreatingTransaction(false);
+      setApiError(error.message || 'Failed to create transaction. Please try again.');
     }
   };
 
@@ -172,13 +177,11 @@ export const Checkout: React.FC = () => {
         customerEmail: String(formData.email || '')
       };
 
-      console.log("Payment payload", payload);
-
-      const paymentResponse = await api.processPayment(payload);
+      const paymentResponse = await processPaymentMutation.mutateAsync(payload);
 
       if (paymentResponse.status === 'APPROVED' || paymentResponse.status === 'PENDING') {
         dispatch(setPaymentStatus(paymentResponse.status));
-        dispatch(updateStock({ id: product.id, quantity: 1 }));
+        // Stock is invalidated in useProcessPayment hook onSuccess
       } else {
         dispatch(setPaymentStatus('DECLINED'));
       }
@@ -200,10 +203,22 @@ export const Checkout: React.FC = () => {
     processPaymentFlow(data);
   };
 
-  if (!product) return <div>No product selected</div>;
+  if (!product) return (
+    <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+      <XCircle className="w-16 h-16 text-red-500 opacity-20" />
+      <h3 className="text-xl font-bold text-slate-100 uppercase tracking-widest">Cart Deployment Failed</h3>
+      <p className="text-slate-400 max-w-xs text-sm">Your tactical payload is empty. Please return to the catalog to select your gear.</p>
+      <button 
+        onClick={() => dispatch(setStep(1))}
+        className="mt-4 px-8 py-3 bg-primary text-background-dark font-black rounded-xl hover:bg-primary/90 transition-all"
+      >
+        RETURN TO ARMORY
+      </button>
+    </div>
+  );
 
-  const baseFee = 500000; // 5,000 COP in cents
-  const deliveryFee = 1500000; // 15,000 COP in cents
+  const baseFee = 5000; // Fixed as 5k pesos
+  const deliveryFee = 15000; // Fixed as 15k pesos
   const totalAmount = product.price + baseFee + deliveryFee;
 
   return (
@@ -449,10 +464,10 @@ export const Checkout: React.FC = () => {
               <button 
                 type="button"
                 onClick={handleSubmit(onSubmitStep2)}
-                disabled={!isValid || paymentMethod !== 'CARD' || isCreatingTransaction}
+                disabled={!isValid || paymentMethod !== 'CARD' || createTransactionMutation.isPending}
                 className={`w-full ${!isValid || paymentMethod !== 'CARD' ? 'bg-slate-800 text-slate-500 cursor-not-allowed grayscale' : 'bg-primary text-background-dark hover:scale-[1.02] shadow-[0_0_30px_rgba(56,255,20,0.15)]'} font-black py-4 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all`}
               >
-                {isCreatingTransaction ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                {createTransactionMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (
                   <>
                     <span>REVIEW SUMMARY</span>
                     <Lock className="w-4 h-4" />
@@ -509,28 +524,28 @@ export const Checkout: React.FC = () => {
                         <p className="text-slate-500 text-xs">Quantity: 1</p>
                       </div>
                     </div>
-                    <p className="text-slate-100 font-bold">${(product.price / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                    <p className="text-slate-100 font-bold">${product.price.toLocaleString('es-CO')}</p>
                  </div>
 
                  <div className="space-y-2 px-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-400">Base Price</span>
-                      <span className="text-slate-100">${(product.price / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                      <span className="text-slate-100">${product.price.toLocaleString('es-CO')}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-400">Fixed Platform Fee</span>
-                      <span className="text-slate-100">${(baseFee / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                      <span className="text-slate-100">${baseFee.toLocaleString('es-CO')}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-400">Shipping Cost</span>
-                      <span className="text-slate-100">${(deliveryFee / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                      <span className="text-slate-100">${deliveryFee.toLocaleString('es-CO')}</span>
                     </div>
                  </div>
 
                  <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 mt-6 flex justify-between items-center">
                     <div>
                       <p className="text-xs font-bold text-primary tracking-widest uppercase">Total to Pay</p>
-                      <p className="text-3xl font-black text-slate-100">${(totalAmount / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })} <span className="text-xs text-primary ml-1">COP</span></p>
+                      <p className="text-3xl font-black text-slate-100">${totalAmount.toLocaleString('es-CO')} <span className="text-xs text-primary ml-1">COP</span></p>
                     </div>
                     <ShieldCheck className="w-10 h-10 text-primary opacity-50" />
                  </div>
@@ -629,7 +644,7 @@ export const Checkout: React.FC = () => {
                     </div>
                     <div className="flex justify-between items-center text-sm border-t border-white/5 pt-4">
                       <span className="text-slate-400">Total Paid:</span>
-                      <span className="text-primary font-black text-xl font-mono">${(totalAmount / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                      <span className="text-primary font-black text-xl font-mono">${totalAmount.toLocaleString('es-CO')}</span>
                     </div>
                  </div>
                )}
