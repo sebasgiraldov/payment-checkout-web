@@ -66,7 +66,7 @@ export default function App() {
       case 4:
         return <Checkout />;
       case 5:
-        if (paymentStatus === 'APPROVED') {
+        if (['APPROVED', 'PENDING'].includes(paymentStatus)) {
           return (
             <motion.div 
               initial={{ opacity: 0, scale: 0.9 }}
@@ -76,9 +76,13 @@ export default function App() {
               <div className="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center">
                 <CheckCircle2 className="w-12 h-12 text-primary" />
               </div>
-              <h1 className="text-4xl font-bold text-slate-100">Payment Successful!</h1>
+              <h1 className="text-4xl font-bold text-slate-100">
+                {paymentStatus === 'APPROVED' ? 'Payment Successful!' : 'Payment Pending'}
+              </h1>
               <p className="text-slate-400 max-w-md">
-                Your order has been confirmed. You will receive an email with your receipt and tracking information shortly.
+                {paymentStatus === 'APPROVED' 
+                  ? 'Your order has been confirmed. You will receive an email with your receipt shortly.' 
+                  : 'Your payment is being processed by the bank. We will update you once it is finalized.'}
               </p>
               <button 
                 onClick={() => {
@@ -141,7 +145,7 @@ export default function App() {
       <main className="max-w-7xl mx-auto px-4 md:px-10 py-10 min-h-[70vh]">
         <AnimatePresence mode="wait">
           <motion.div
-            key={step}
+            key={step > 1 && step < 5 ? 'checkout-step' : step}
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -10 }}

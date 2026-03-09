@@ -1,6 +1,7 @@
 import React from 'react';
 import { Product } from '../types';
 import { motion } from 'motion/react';
+import { getProductImage } from '../utils/constants';
 
 interface ProductCardProps {
   product: Product;
@@ -10,7 +11,7 @@ interface ProductCardProps {
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onBuy }) => {
   const displayPrice = (product.price / 100).toLocaleString('es-CO', { minimumFractionDigits: 2 });
-  const displayImage = product.image || `https://images.unsplash.com/photo-1593642702821-c8da6771f0c6?auto=format&fit=crop&q=80&w=1000`;
+  const displayImage = getProductImage(product.name);
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}

@@ -24,18 +24,27 @@ export interface Delivery {
 
 export interface TransactionRequest {
   productId: string;
-  quantity: number;
-  customer: Customer;
-  delivery: Delivery;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  deliveryAddress: string;
+  deliveryCity: string;
+  deliveryState: string;
+  deliveryCountry: string;
+  deliveryPostalCode: string;
+  baseFee: number;
+  deliveryFee: number;
+  currency: string;
+  paymentMethod: string;
 }
 
 export interface TransactionResponse {
   id: string;
   status: string;
   productId: string;
-  quantity: number;
-  customer: Customer;
-  delivery: Delivery;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
 }
 
 export interface CardDetails {
@@ -48,8 +57,12 @@ export interface CardDetails {
 
 export interface PaymentRequest {
   transactionId: string;
-  paymentMethod: 'CARD' | 'NEQUI' | 'PSE' | 'BANCOLOMBIA_TRANSFER';
-  paymentDetails: CardDetails;
+  cardNumber: string;
+  cardHolder: string;
+  expiryMonth: string;
+  expiryYear: string;
+  cvv: string;
+  customerEmail: string;
 }
 
 export interface PaymentResponse {
