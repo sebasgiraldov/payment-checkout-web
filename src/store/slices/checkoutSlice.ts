@@ -18,7 +18,7 @@ export interface CheckoutState {
   } | null;
   paymentMethod: 'CARD' | 'NEQUI' | 'PSE' | 'BANCOLOMBIA_TRANSFER';
   transactionId: string | null;
-  paymentStatus: 'IDLE' | 'PROCESSING' | 'APPROVED' | 'DECLINED' | 'ERROR';
+  paymentStatus: 'IDLE' | 'PROCESSING' | 'APPROVED' | 'PENDING' | 'DECLINED' | 'ERROR';
 }
 
 const initialState: CheckoutState = {

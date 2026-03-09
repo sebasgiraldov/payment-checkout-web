@@ -30,8 +30,14 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error('Failed to process payment');
+
     const result: ApiResponse<PaymentResponse> = await response.json();
+    
+    if (!response.ok) {
+      const errorMessage = (result as any).message || 'Failed to process payment';
+      throw new Error(errorMessage);
+    }
+    
     return result.data;
   },
 };

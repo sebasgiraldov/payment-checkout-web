@@ -2,6 +2,7 @@ import React from 'react';
 import { Product } from '../types';
 import { ChevronRight, Minus, Plus, Bolt, ArrowRight, Verified, Truck } from 'lucide-react';
 import { motion } from 'motion/react';
+import { getProductImage } from '../utils/constants';
 
 interface ProductDetailProps {
   product: Product;
@@ -30,7 +31,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
         <div className="space-y-4">
           <div className="aspect-square rounded-xl bg-white/5 border border-white/10 overflow-hidden flex items-center justify-center p-8 group">
             <img 
-              src={product.image || 'https://images.unsplash.com/photo-1593642702821-c8da6771f0c6?auto=format&fit=crop&q=80&w=1000'} 
+              src={getProductImage(product.name)} 
               alt={product.name}
               className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
               referrerPolicy="no-referrer"
@@ -39,7 +40,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
           <div className="grid grid-cols-4 gap-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="aspect-square rounded-lg border border-white/10 bg-white/5 p-2 cursor-pointer hover:border-primary/40 transition-colors">
-                <img src={product.image || 'https://images.unsplash.com/photo-1593642702821-c8da6771f0c6?auto=format&fit=crop&q=80&w=1000'} alt="Detail" className="w-full h-full object-cover rounded opacity-50" referrerPolicy="no-referrer" />
+                <img src={getProductImage(product.name)} alt="Detail" className="w-full h-full object-cover rounded opacity-50" referrerPolicy="no-referrer" />
               </div>
             ))}
             <div className="aspect-square rounded-lg border border-white/10 bg-white/5 p-2 cursor-pointer hover:border-primary/40 transition-colors flex items-center justify-center">
