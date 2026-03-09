@@ -1,0 +1,130 @@
+﻿
+> react-example@0.0.0 test
+> jest src/store/slices/checkoutSlice.test.ts
+
+node.exe : 
+ts-jest[config] (WARN) 
+[94mmessage[0m[90m 
+TS151001: [0mIf you have 
+issues related to 
+imports, you should 
+consider setting 
+`esModuleInterop` to 
+`true` in your TypeScript 
+configuration file 
+(usually 
+`tsconfig.json`). See http
+s://blogs.msdn.microsoft.c
+om/typescript/2018/01/31/a
+nnouncing-typescript-2-7/#
+easier-ecmascript-module-i
+nteroperability for more 
+information.
+En línea: 1 Carácter: 1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (t  
+  s-jest[config]...re i   
+ nformation.:String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+FAIL src/store/slices/chec
+koutSlice.test.ts (8.186 
+s)
+  checkoutSlice
+    √ should return the 
+initial state (21 ms)
+    √ should handle 
+setStep (49 ms)
+    √ should handle 
+setCustomerData (6 ms)
+    √ should handle 
+setDeliveryData (7 ms)
+    √ should handle 
+setPaymentMethod (16 ms)
+    √ should handle 
+setTransactionId (7 ms)
+    √ should handle 
+setPaymentStatus (5 ms)
+    × should handle 
+resetCheckout (34 ms)
+    √ should preserve 
+state while updating 
+other fields (6 ms)
+
+  ● checkoutSlice › 
+should handle 
+resetCheckout
+
+    expect(received).toEqu
+al(expected) // deep 
+equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+        "customerData": 
+null,
+        "deliveryData": 
+null,
+    -   "paymentMethod": 
+"CARD",
+    +   "paymentMethod": 
+"NEQUI",
+        "paymentStatus": 
+"IDLE",
+        "step": 1,
+        "transactionId": 
+null,
+      }
+
+    [0m [90m 102 |[39m
+     [90m 103 |[39m     
+[36mconst[39m actual 
+[33m=[39m checkoutReduce
+r(modifiedState[33m,[39m
+ resetCheckout())[33m;[3
+9m
+    
+[31m[1m>[22m[39m[90m 
+104 |[39m     expect(actu
+al)[33m.[39mtoEqual(init
+ialState)[33m;[39m
+     [90m     |[39m     
+               
+[31m[1m^[22m[39m
+     [90m 105 |[39m   
+})[33m;[39m
+     [90m 106 |[39m
+     [90m 107 |[39m   
+test([32m'should 
+preserve state while 
+updating other 
+fields'[39m[33m,[39m 
+() [33m=>[39m {[0m
+
+      at 
+Object.<anonymous> (src/st
+ore/slices/checkoutSlice.t
+est.ts:104:20)
+
+Test Suites: 1 failed, 1 
+total
+Tests:       1 failed, 8 
+passed, 9 total
+Snapshots:   0 total
+Time:        25.074 s
+Ran all test suites 
+matching src/store/slices/
+checkoutSlice.test.ts.
+

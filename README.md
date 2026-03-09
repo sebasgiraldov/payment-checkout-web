@@ -54,8 +54,10 @@ A high-performance, mobile-first e-commerce checkout application built with Reac
 The project uses Jest for unit testing of core business logic and Redux state transitions.
 
 ```bash
-npm test
+npm test -- --coverage
 ```
+
+![Coverage Report](coverageReport.png)
 
 ## 🚢 Deployment
 
