@@ -1,18 +1,57 @@
 import React from 'react';
 import { Product } from '../types';
 import { ProductCard } from './ProductCard';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Loader2, AlertCircle } from 'lucide-react';
+import { useProducts } from '../hooks/useProducts';
 
 interface ProductGridProps {
-  products: Product[];
   onProductClick: (product: Product) => void;
   onBuy: (product: Product) => void;
+  searchQuery: string;
 }
 
-export const ProductGrid: React.FC<ProductGridProps> = ({ products, onProductClick, onBuy }) => {
+export const ProductGrid: React.FC<ProductGridProps> = ({ onProductClick, onBuy, searchQuery }) => {
   const [activeCategory, setActiveCategory] = React.useState('All Items');
+  const { data: products, isLoading, error } = useProducts();
 
-  const filteredProducts = products;
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+        <p className="mt-4 text-slate-400 font-medium">Synchronizing elite inventory...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+        <h3 className="text-xl font-bold text-slate-100">Connection Interrupted</h3>
+        <p className="text-slate-400 max-w-sm mt-2">We couldn't reach the warehouse. Please check your connection and try again.</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-6 px-6 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm font-bold transition-colors"
+        >
+          RETRY CONNECTION
+        </button>
+      </div>
+    );
+  }
+
+  const filteredProducts = (products || []).filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         p.description.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (activeCategory === 'All Items') return matchesSearch;
+    
+    // Simple category mapping - in a real app this would come from the API
+    const isPeripheral = ['Mechanical Keyboard', 'Wireless Mouse', 'USB-C Hub'].includes(p.name);
+    if (activeCategory === 'Peripherals') return isPeripheral && matchesSearch;
+    if (activeCategory === 'Components') return !isPeripheral && matchesSearch;
+    
+    return matchesSearch;
+  });
 
   return (
     <div className="space-y-8">
@@ -47,16 +86,22 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ products, onProductCli
         ))}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filteredProducts.map(product => (
-          <ProductCard 
-            key={product.id} 
-            product={product} 
-            onClick={() => onProductClick(product)} 
-            onBuy={() => onBuy(product)}
-          />
-        ))}
-      </div>
+      {filteredProducts.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {filteredProducts.map(product => (
+            <ProductCard 
+              key={product.id} 
+              product={product} 
+              onClick={() => onProductClick(product)} 
+              onBuy={() => onBuy(product)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="py-20 text-center bg-slate-900/20 rounded-2xl border border-dashed border-slate-800">
+          <p className="text-slate-500 font-medium">No tactical gear matches your search criteria.</p>
+        </div>
+      )}
     </div>
   );
 };
